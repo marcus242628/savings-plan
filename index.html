@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Calculator — Marcus & Angie</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10; --surface: #0e1419; --surface2: #141c24; --surface3: #1a242e;
+    --border: #1e2c3a; --border2: #243444; --accent: #00e5a0; --marcus: #38b6ff;
+    --angie: #ff6eb4; --travel: #a78bfa; --warn: #ffb830; --danger: #ff4f4f;
+    --text: #e8f0f8; --muted: #5a7a94; --muted2: #3a566e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif;
+    min-height: 100vh; padding: 48px 20px 60px;
+    background-image: radial-gradient(ellipse at 20% 0%, #00e5a008 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, #38b6ff06 0%, transparent 60%);
+  }
+  .header { text-align: center; margin-bottom: 48px; }
+  .header-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .header h1 {
+    font-family: 'Syne', sans-serif; font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1; margin-bottom: 12px;
+    background: linear-gradient(135deg, #e8f0f8 0%, #38b6ff 50%, #00e5a0 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .header p { color: var(--muted); font-size: 0.88rem; font-family: 'JetBrains Mono', monospace; }
+  .toolbar { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 36px; flex-wrap: wrap; }
+  .toggle-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 3px; gap: 2px; }
+  .toggle-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 7px 16px; border-radius: 100px; border: none; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.2s; }
+  .toggle-btn.active { background: var(--accent); color: #080c10; font-weight: 600; }
+  .income-strip { display: flex; justify-content: center; gap: 12px; margin-bottom: 36px; flex-wrap: wrap; }
+  .income-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+  .income-pill .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .income-pill .who { font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .income-pill .amt { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+  .income-pill .per { font-size: 0.68rem; color: var(--muted); }
+  .whatif-banner { max-width: 960px; margin: 0 auto 24px; background: linear-gradient(135deg, #38b6ff0a, #00e5a00a); border: 1px solid #38b6ff33; border-radius: 16px; padding: 20px 28px; display: none; }
+  .whatif-banner.active { display: block; }
+  .whatif-title { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--marcus); margin-bottom: 14px; }
+  .whatif-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .whatif-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .whatif-btn:hover { border-color: var(--marcus); background: #38b6ff0a; }
+  .whatif-btn.selected { border-color: var(--marcus); background: #38b6ff15; }
+  .whatif-btn.angie-btn:hover { border-color: var(--angie); background: #ff6eb40a; }
+  .whatif-btn.angie-btn.selected { border-color: var(--angie); background: #ff6eb415; }
+  .wf-label { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+  .wf-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--marcus); }
+  .wf-val.angie { color: var(--angie); }
+  .wf-sub { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+  .whatif-sub-label { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--angie); margin-bottom: 10px; margin-top: 14px; }
+  .global-controls { max-width: 960px; margin: 0 auto 48px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .gc-section { padding: 24px 28px; border-bottom: 1px solid var(--border); }
+  .gc-section:last-child { border-bottom: none; }
+  .gc-section-title { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 18px; }
+  .gc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+  .gc-item label { display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+  .gc-item label .val { color: var(--text); font-size: 0.78rem; font-weight: 500; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: var(--border2); outline: none; cursor: pointer; width: 100%; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 0 8px var(--accent); cursor: pointer; transition: transform 0.15s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type=range].marcus-slider::-webkit-slider-thumb { background: var(--marcus); box-shadow: 0 0 8px var(--marcus); }
+  input[type=range].angie-slider::-webkit-slider-thumb { background: var(--angie); box-shadow: 0 0 8px var(--angie); }
+  input[type=range].travel-slider::-webkit-slider-thumb { background: var(--travel); box-shadow: 0 0 8px var(--travel); }
+  .locked-bill-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .locked-bill-box .lbb-total { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--text); margin-bottom: 5px; }
+  .locked-bill-box .lbb-items { font-size: 0.64rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); line-height: 1.8; }
+  .locked-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; margin-top: 6px; }
+  .income-editors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .income-editor { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .ie-name { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; margin-bottom: 14px; }
+  .ie-check { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.8rem; line-height: 1; margin-bottom: 2px; }
+  .ie-monthly { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-bottom: 14px; }
+  .ie-range label { display: flex; justify-content: space-between; font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-bottom: 6px; }
+  .ie-range label span { color: var(--text); }
+  .ie-minmax { display: flex; justify-content: space-between; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--muted2); margin-top: 4px; }
+  .extra-bill-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .extra-bill-name { font-size: 0.8rem; color: var(--text); }
+  .extra-bill-amt { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--warn); margin-left: 10px; }
+  .remove-btn { background: var(--danger); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; cursor: pointer; letter-spacing: 0.06em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto 48px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .card.recommended { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 40px rgba(0,229,160,0.08); }
+  .rec-badge { position: absolute; top: 14px; right: 14px; background: var(--accent); color: #080c10; font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; font-weight: 500; letter-spacing: 0.1em; padding: 4px 9px; border-radius: 4px; text-transform: uppercase; }
+  .card-head { padding: 22px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+  .rent-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.4rem; line-height: 1; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .rent-sub { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .status-pill { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 100px; font-size: 0.66rem; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
+  .needs-meter { text-align: right; }
+  .needs-meter .big { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 2rem; line-height: 1; }
+  .needs-meter .lbl { font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .savings-control { padding: 16px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .sc-row { margin-bottom: 12px; }
+  .sc-row:last-child { margin-bottom: 0; }
+  .sc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .sc-label { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+  .sc-value { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 500; }
+  .sc-minmax { font-size: 0.6rem; font-family: 'JetBrains Mono', monospace; color: var(--muted2); display: flex; justify-content: space-between; margin-top: 4px; }
+  .equal-spend-bar { padding: 10px 24px; background: var(--surface3); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .esb-label { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .esb-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+  .esb-each { font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .persons { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .person-col { background: var(--surface); padding: 16px 16px; }
+  .person-col.marcus-col { background: var(--surface2); }
+  .person-name { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; margin-bottom: 10px; }
+  .prow { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .prow:last-child { border-bottom: none; }
+  .prow .pl { color: var(--muted); font-size: 0.73rem; }
+  .prow .pv { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+  .prow.buffer-row .pv { color: var(--warn); }
+  .prow.spending-row { margin-top: 4px; padding-top: 8px; border-top: 2px solid var(--border2); border-bottom: none; }
+  .prow.spending-row .pl { color: var(--text); font-weight: 600; font-size: 0.78rem; }
+  .prow.spending-row .pv { font-size: 0.92rem; font-weight: 600; }
+  .card-summary { padding: 14px 24px; background: var(--surface3); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+  .cs-item .cs-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; line-height: 1; margin-bottom: 3px; }
+  .cs-item .cs-lbl { font-size: 0.58rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .travel-row { padding: 12px 24px; background: #a78bfa08; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .tr-label { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--travel); letter-spacing: 0.08em; text-transform: uppercase; }
+  .tr-cycle { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--travel); }
+  .tr-annual { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .pct-section { padding: 14px 24px; }
+  .pct-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .pct-row:last-child { margin-bottom: 0; }
+  .pct-lbl { color: var(--muted); width: 52px; flex-shrink: 0; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; }
+  .pct-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+  .pct-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
+  .pct-val { font-family: 'JetBrains Mono', monospace; width: 32px; text-align: right; font-size: 0.68rem; }
+  .annual-bar { max-width: 1400px; margin: 0 auto 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 32px; }
+  .annual-bar h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; margin-bottom: 20px; }
+  .annual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .annual-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 12px; text-align: center; transition: border-color 0.3s; }
+  .annual-item .ar { font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-bottom: 6px; }
+  .annual-item .av { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; line-height: 1; }
+  .annual-item .av2 { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem; color: var(--travel); margin-top: 2px; }
+  .annual-item .ac { font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-top: 4px; }
+  .footer { text-align: center; color: var(--muted); font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; max-width: 700px; margin: 0 auto; line-height: 1.8; }
+  .footer strong { color: var(--muted2); }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .income-editors { grid-template-columns: 1fr; }
+    .card-summary { grid-template-columns: 1fr 1fr; }
+    .card-summary .cs-item:last-child { grid-column: span 2; }
+    .whatif-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">💰 Budget Calculator</div>
+  <h1>Marcus & Angie</h1>
+  <p>what-if simulator · travel fund · monthly / biweekly · equal spending · extra bills</p>
+</div>
+
+<div class="toolbar">
+  <div class="toggle-group" id="view-toggle">
+    <button class="toggle-btn active" data-view="biweekly">Biweekly</button>
+    <button class="toggle-btn" data-view="monthly">Monthly</button>
+  </div>
+  <div class="toggle-group">
+    <button class="toggle-btn" id="whatif-toggle-btn">⚡ What-If Simulator</button>
+  </div>
+</div>
+
+<div class="whatif-banner" id="whatif-banner">
+  <div class="whatif-title">⚡ Marcus — Raise Scenarios</div>
+  <div class="whatif-grid" id="marcus-whatif"></div>
+  <div class="whatif-sub-label">Angie — Job Scenarios</div>
+  <div class="whatif-grid" id="angie-whatif"></div>
+</div>
+
+<div class="income-strip">
+  <div class="income-pill">
+    <div class="dot" style="background:var(--marcus)"></div>
+    <div><div class="who">Marcus</div><div class="amt" style="color:var(--marcus)" id="strip-marcus">$1,585<span class="per">/check</span></div></div>
+  </div>
+  <div class="income-pill">
+    <div class="dot" style="background:var(--angie)"></div>
+    <div><div class="who">Angie</div><div class="amt" style="color:var(--angie)" id="strip-angie">$1,250<span class="per">/check</span></div></div>
+  </div>
+  <div class="income-pill" style="border-color:var(--accent)">
+    <div class="dot" style="background:var(--accent)"></div>
+    <div><div class="who">Combined</div><div class="amt" style="color:var(--accent)" id="strip-combined">$2,835<span class="per">/check</span></div></div>
+  </div>
+</div>
+
+<div class="global-controls">
+  <div class="gc-section">
+    <div class="gc-section-title" style="color:var(--accent)">💵 Take-Home Income (biweekly)</div>
+    <div class="income-editors">
+      <div class="income-editor" style="border-color:#38b6ff33">
+        <div class="ie-name" style="color:var(--marcus)">Marcus</div>
+        <div class="ie-check" style="color:var(--marcus)" id="marcus-check-disp">$1,585</div>
+        <div class="ie-monthly" id="marcus-monthly-disp">$3,170 / mo</div>
+        <div class="ie-range">
+          <label>Per check <span id="marcus-range-val">$1,585</span></label>
+          <input type="range" class="marcus-slider" id="marcus-income" min="1000" max="2500" step="25" value="1585">
+          <div class="ie-minmax"><span>$1,000</span><span>$2,500</span></div>
+        </div>
+      </div>
+      <div class="income-editor" style="border-color:#ff6eb433">
+        <div class="ie-name" style="color:var(--angie)">Angie</div>
+        <div class="ie-check" style="color:var(--angie)" id="angie-check-disp">$1,250</div>
+        <div class="ie-monthly" id="angie-monthly-disp">$2,500 / mo</div>
+        <div class="ie-range">
+          <label>Per check <span id="angie-range-val">$1,250</span></label>
+          <input type="range" class="angie-slider" id="angie-income" min="800" max="2200" step="25" value="1250">
+          <div class="ie-minmax"><span>$800</span><span>$2,200</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gc-section">
+    <div class="gc-section-title" style="color:var(--accent)">⚙ Budget Settings</div>
+    <div class="gc-grid">
+      <div class="gc-item">
+        <label>Groceries + Gas / mo <span class="val" id="g-groc-val">$700</span></label>
+        <input type="range" id="g-groc" min="400" max="1200" step="25" value="700">
+      </div>
+      <div class="gc-item">
+        <label>Min buffer / person <span class="val" id="g-buf-val">$100</span></label>
+        <input type="range" id="g-buf" min="25" max="300" step="25" value="100">
+      </div>
+      <div class="gc-item" style="grid-column: span 2;">
+        <label style="color:var(--muted); margin-bottom:10px; display:block;">🔒 Fixed Bills (non-rent) / mo</label>
+        <div class="locked-bill-box">
+          <div class="lbb-total">$990 / mo</div>
+          <div class="lbb-items">Car · $350 &nbsp;|&nbsp; Insurance · $260 &nbsp;|&nbsp; Marcus phone · $110 &nbsp;|&nbsp; Angie phone · $50 &nbsp;|&nbsp; JEA · $120</div>
+          <div class="locked-badge">🔒 locked · cannot be adjusted</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gc-section">
+    <div class="gc-section-title" style="color:var(--warn)">➕ Extra Bills (monthly)</div>
+    <div id="extra-bills-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;"></div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <input type="text" id="new-bill-name" placeholder="e.g. Second car payment" maxlength="30"
+        style="flex:1; min-width:140px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-family:'Outfit',sans-serif; font-size:0.85rem; outline:none;">
+      <input type="number" id="new-bill-amount" placeholder="$ amount" min="0" max="5000" step="10"
+        style="width:100px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:0.85rem; outline:none;">
+      <button id="add-bill-btn"
+        style="background:var(--warn); color:#080c10; border:none; border-radius:8px; padding:9px 18px; font-family:'JetBrains Mono',monospace; font-size:0.72rem; font-weight:600; letter-spacing:0.08em; cursor:pointer;">
+        + ADD
+      </button>
+    </div>
+    <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:var(--muted);">Added to all cards automatically</span>
+      <span style="font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; color:var(--warn);" id="extra-bills-total">+$0/mo</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid" id="cards"></div>
+
+<div class="annual-bar">
+  <h2>Annual Savings by Scenario</h2>
+  <div class="annual-grid" id="annualGrid"></div>
+</div>
+
+<div class="footer">
+  <strong>Equal spending guaranteed</strong> · Marcus absorbs extra bills so Angie matches his spending<br>
+  Savings: General + Travel · Buffer is protected floor · Base bills locked · Extra bills adjustable<br>
+  <strong>What-If:</strong> tap any scenario to instantly update all cards
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── Constants ────────────────────────────────────────────────
+  var BASE_FIXED = 990;
+  var extraBills = [];
+  var savingsState = {};
+  var travelState  = {};
+  var currentView  = 'biweekly';
+  var whatifVisible = false;
+
+  var scenarios = [
+    { rent: 1200, label: 'Tight area',   color: '#ffb830' },
+    { rent: 1400, label: 'Great deal',   color: '#00e5a0', rec: true },
+    { rent: 1600, label: 'Good value',   color: '#00e5a0' },
+    { rent: 1860, label: 'Current rent', color: '#ff8c42' },
+    { rent: 2000, label: 'Stretch',      color: '#ff4f4f' },
+    { rent: 2200, label: 'Too high',     color: '#ff4f4f' },
+  ];
+
+  var marcusWhatIf = [
+    { label: 'Current $23/hr', check: 1450 },
+    { label: 'Raise $25/hr',   check: 1585 },
+    { label: 'Raise $26/hr',   check: 1650 },
+    { label: 'Raise $28/hr',   check: 1780 },
+  ];
+
+  var angieWhatIf = [
+    { label: 'Current',        check: 1250 },
+    { label: 'New job $20/hr', check: 1320 },
+    { label: 'New job $22/hr', check: 1450 },
+    { label: 'New job $25/hr', check: 1585 },
+  ];
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function getExtraTotal() {
+    return extraBills.reduce(function(s, b) { return s + b.amount; }, 0);
+  }
+
+  function getFixed() {
+    return BASE_FIXED + getExtraTotal();
+  }
+
+  function getIncome() {
+    return {
+      marcus: +document.getElementById('marcus-income').value,
+      angie:  +document.getElementById('angie-income').value
+    };
+  }
+
+  function getGlobals() {
+    return {
+      groceries: +document.getElementById('g-groc').value,
+      buffer:    +document.getElementById('g-buf').value
+    };
+  }
+
+  function fmt(n) {
+    var r = Math.round(n);
+    return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString();
+  }
+
+  function needsColor(pct) {
+    if (pct <= 52) return '#00e5a0';
+    if (pct <= 57) return '#ffb830';
+    if (pct <= 63) return '#ff8c42';
+    return '#ff4f4f';
+  }
+
+  function spendColor(amount, buffer) {
+    if (amount < buffer) return '#ff4f4f';
+    if (amount < buffer * 1.5) return '#ffb830';
+    return '#00e5a0';
+  }
+
+  function setTrack(el, color) {
+    var min = +el.min, max = +el.max, val = +el.value;
+    var pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+    el.style.background = 'linear-gradient(to right,' + color + ' 0%,' + color + ' ' + pct + '%,var(--border2) ' + pct + '%,var(--border2) 100%)';
+  }
+
+  // ── Calc ─────────────────────────────────────────────────────
+  function calcMax(rent, income, g) {
+    var billsPC = (rent + getFixed()) / 2;
+    var grocPC  = g.groceries / 2;
+    var bufPC   = g.buffer * 2;
+    return Math.max(0, Math.floor(income.marcus + income.angie - billsPC - grocPC - bufPC));
+  }
+
+  function calcCard(rent, genSav, travSav, income, g) {
+    var billsPC  = (rent + getFixed()) / 2;
+    var grocPC   = g.groceries / 4;
+    var totalSav = genSav + travSav;
+    var mPct     = income.marcus / (income.marcus + income.angie);
+    var aPct     = 1 - mPct;
+
+    var mSav = genSav  * mPct;
+    var aSav = genSav  * aPct;
+    var mTrv = travSav * mPct;
+    var aTrv = travSav * aPct;
+
+    var pool     = income.marcus + income.angie;
+    var afterAll = pool - billsPC - grocPC * 2 - totalSav;
+    var equalSpend = Math.max(g.buffer, afterAll / 2);
+
+    // clamp savings so nobody drops below equalSpend
+    var mMax = Math.max(0, income.marcus - grocPC - equalSpend);
+    var aMax = Math.max(0, income.angie  - grocPC - equalSpend);
+    var mTot = mSav + mTrv, aTot = aSav + aTrv;
+    if (mTot > mMax) { var mr = mMax / mTot; mSav *= mr; mTrv *= mr; }
+    if (aTot > aMax) { var ar = aMax / aTot; aSav *= ar; aTrv *= ar; }
+
+    // bills each person pays = remainder
+    var mBills = income.marcus - grocPC - mSav - mTrv - equalSpend;
+    var aBills = income.angie  - grocPC - aSav - aTrv - equalSpend;
+    if (aBills < 0) { aBills = 0; mBills = billsPC; }
+
+    var totalIncome = (income.marcus + income.angie) * 2;
+    var totalNeeds  = rent + getFixed() + g.groceries;
+    var genSavMo    = (mSav + aSav) * 2;
+    var trvSavMo    = (mTrv + aTrv) * 2;
+
+    return {
+      mBills: mBills, aBills: aBills,
+      mSav: mSav, aSav: aSav,
+      mTrv: mTrv, aTrv: aTrv,
+      grocPC: grocPC,
+      equalSpend: equalSpend,
+      needsPct:  Math.round(totalNeeds / totalIncome * 100),
+      savPct:    Math.round(genSavMo   / totalIncome * 100),
+      trvPct:    Math.round(trvSavMo   / totalIncome * 100),
+      spendPct:  Math.round((equalSpend * 4) / totalIncome * 100),
+      genSavMo:  genSavMo,
+      trvSavMo:  trvSavMo
+    };
+  }
+
+  // ── Extra Bills ──────────────────────────────────────────────
+  function renderExtraBills() {
+    var list  = document.getElementById('extra-bills-list');
+    var total = document.getElementById('extra-bills-total');
+    list.innerHTML = '';
+    for (var bi = 0; bi < extraBills.length; bi++) {
+      (function(bill, idx) {
+        var row = document.createElement('div');
+        row.className = 'extra-bill-row';
+        var left = document.createElement('div');
+        left.style.display = 'flex';
+        left.style.alignItems = 'center';
+        left.style.gap = '10px';
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'extra-bill-name';
+        nameSpan.textContent = bill.name;
+        var amtSpan = document.createElement('span');
+        amtSpan.className = 'extra-bill-amt';
+        amtSpan.textContent = '$' + bill.amount + '/mo';
+        left.appendChild(nameSpan);
+        left.appendChild(amtSpan);
+        var btn = document.createElement('button');
+        btn.className = 'remove-btn';
+        btn.textContent = 'REMOVE';
+        btn.addEventListener('click', function() {
+          extraBills.splice(idx, 1);
+          renderExtraBills();
+          updateAll();
+        });
+        row.appendChild(left);
+        row.appendChild(btn);
+        list.appendChild(row);
+      })(extraBills[bi], bi);
+    }
+    var t = getExtraTotal();
+    total.textContent = t > 0 ? '+$' + t.toLocaleString() + '/mo' : '+$0/mo';
+  }
+
+  document.getElementById('add-bill-btn').addEventListener('click', function() {
+    var nameEl   = document.getElementById('new-bill-name');
+    var amountEl = document.getElementById('new-bill-amount');
+    var name     = nameEl.value.trim();
+    var amount   = Math.round(+amountEl.value);
+    if (!name || !amount || amount <= 0) return;
+    extraBills.push({ name: name, amount: amount });
+    nameEl.value   = '';
+    amountEl.value = '';
+    renderExtraBills();
+    updateAll();
+  });
+
+  document.getElementById('new-bill-amount').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('add-bill-btn').click();
+  });
+
+  // ── Income displays ──────────────────────────────────────────
+  function updateIncomeDisplays() {
+    var income = getIncome();
+    var pl = currentView === 'monthly' ? '/mo' : '/check';
+    var mv = currentView === 'monthly' ? 2 : 1;
+    document.getElementById('marcus-check-disp').textContent   = fmt(income.marcus * mv);
+    document.getElementById('marcus-monthly-disp').textContent = fmt(income.marcus * 2) + ' / mo';
+    document.getElementById('marcus-range-val').textContent    = fmt(income.marcus);
+    document.getElementById('angie-check-disp').textContent    = fmt(income.angie * mv);
+    document.getElementById('angie-monthly-disp').textContent  = fmt(income.angie * 2) + ' / mo';
+    document.getElementById('angie-range-val').textContent     = fmt(income.angie);
+    document.getElementById('strip-marcus').innerHTML   = fmt(income.marcus * mv) + '<span class="per">' + pl + '</span>';
+    document.getElementById('strip-angie').innerHTML    = fmt(income.angie  * mv) + '<span class="per">' + pl + '</span>';
+    document.getElementById('strip-combined').innerHTML = fmt((income.marcus + income.angie) * mv) + '<span class="per">' + pl + '</span>';
+    setTrack(document.getElementById('marcus-income'), '#38b6ff');
+    setTrack(document.getElementById('angie-income'),  '#ff6eb4');
+  }
+
+  // ── Update single card ───────────────────────────────────────
+  function updateCard(idx, s) {
+    var income = getIncome();
+    var g      = getGlobals();
+    var key    = 'rent_'   + s.rent;
+    var tkey   = 'travel_' + s.rent;
+    if (savingsState[key] === undefined) savingsState[key] = Math.min(300, calcMax(s.rent, income, g));
+    if (travelState[tkey]  === undefined) travelState[tkey]  = 75;
+
+    var maxSav    = calcMax(s.rent, income, g);
+    var curSav    = Math.min(savingsState[key], maxSav);
+    var maxTrv    = Math.max(0, maxSav - curSav);
+    var curTrv    = Math.min(travelState[tkey], maxTrv);
+    savingsState[key] = curSav;
+    travelState[tkey] = curTrv;
+
+    var c  = calcCard(s.rent, curSav, curTrv, income, g);
+    var nc = needsColor(c.needsPct);
+    var sc = spendColor(c.equalSpend, g.buffer);
+    var m  = currentView === 'monthly' ? 2 : 1;
+    var pl = currentView === 'monthly' ? '/mo' : '/cycle';
+
+    // Sliders
+    var slider = document.getElementById('slider-' + idx);
+    slider.max = maxSav; slider.value = curSav;
+    setTrack(slider, '#00e5a0');
+    document.getElementById('slider-val-' + idx).textContent = fmt(curSav * m) + pl;
+
+    var tSlider = document.getElementById('tslider-' + idx);
+    tSlider.max = maxTrv; tSlider.value = curTrv;
+    setTrack(tSlider, '#a78bfa');
+    document.getElementById('tslider-val-' + idx).textContent = fmt(curTrv * m) + pl;
+
+    // Header
+    var npEl = document.getElementById('needs-pct-' + idx);
+    npEl.textContent = c.needsPct + '%'; npEl.style.color = nc;
+
+    // Equal spend
+    var esEl = document.getElementById('equal-spend-' + idx);
+    esEl.textContent = fmt(c.equalSpend * m); esEl.style.color = sc;
+    document.getElementById('equal-spend-lbl-' + idx).textContent = 'each ' + (currentView === 'monthly' ? '/mo' : '/check');
+
+    // Per person
+    document.getElementById('m-takehome-' + idx).textContent = fmt(income.marcus * m);
+    document.getElementById('a-takehome-' + idx).textContent = fmt(income.angie  * m);
+    document.getElementById('m-bills-' + idx).textContent    = fmt(c.mBills * m);
+    document.getElementById('a-bills-' + idx).textContent    = fmt(c.aBills * m);
+    document.getElementById('m-groc-' + idx).textContent     = fmt(c.grocPC * m);
+    document.getElementById('a-groc-' + idx).textContent     = fmt(c.grocPC * m);
+    var mse = document.getElementById('m-sav-' + idx); mse.textContent = fmt(c.mSav * m); mse.style.color = c.mSav > 0 ? 'var(--accent)' : 'var(--muted)';
+    var ase = document.getElementById('a-sav-' + idx); ase.textContent = fmt(c.aSav * m); ase.style.color = c.aSav > 0 ? 'var(--accent)' : 'var(--muted)';
+    var mte = document.getElementById('m-trv-' + idx); mte.textContent = fmt(c.mTrv * m); mte.style.color = c.mTrv > 0 ? 'var(--travel)' : 'var(--muted)';
+    var ate = document.getElementById('a-trv-' + idx); ate.textContent = fmt(c.aTrv * m); ate.style.color = c.aTrv > 0 ? 'var(--travel)' : 'var(--muted)';
+    document.getElementById('m-buf-' + idx).textContent = fmt(g.buffer * m) + ' min';
+    document.getElementById('a-buf-' + idx).textContent = fmt(g.buffer * m) + ' min';
+    var msp = document.getElementById('m-spend-' + idx); msp.textContent = fmt(c.equalSpend * m); msp.style.color = sc;
+    var asp = document.getElementById('a-spend-' + idx); asp.textContent = fmt(c.equalSpend * m); asp.style.color = sc;
+
+    // Summary
+    var mse2 = document.getElementById('monthly-sav-' + idx); mse2.textContent = fmt(c.genSavMo); mse2.style.color = c.genSavMo > 0 ? '#00e5a0' : '#ff4f4f';
+    var ase2 = document.getElementById('annual-sav-'  + idx); ase2.textContent = fmt(c.genSavMo * 12); ase2.style.color = c.genSavMo > 0 ? '#00e5a0' : '#ff4f4f';
+    document.getElementById('per10k-' + idx).textContent = c.genSavMo > 0 ? Math.ceil(10000 / c.genSavMo) + ' mo' : '\u2014';
+
+    // Travel row
+    document.getElementById('travel-cycle-'  + idx).textContent = fmt(c.trvSavMo * (currentView === 'monthly' ? 1 : 0.5));
+    document.getElementById('travel-annual-' + idx).textContent = fmt(c.trvSavMo * 12) + '/yr';
+
+    // Pct bars
+    var nf = document.getElementById('pct-needs-fill-' + idx); nf.style.width = Math.min(c.needsPct,100) + '%'; nf.style.background = nc;
+    document.getElementById('pct-needs-val-'  + idx).textContent = c.needsPct + '%'; document.getElementById('pct-needs-val-' + idx).style.color = nc;
+    document.getElementById('pct-sav-fill-'   + idx).style.width = c.savPct + '%';
+    document.getElementById('pct-sav-val-'    + idx).textContent = c.savPct + '%';
+    document.getElementById('pct-trv-fill-'   + idx).style.width = c.trvPct + '%';
+    document.getElementById('pct-trv-val-'    + idx).textContent = c.trvPct + '%';
+    document.getElementById('pct-spend-fill-' + idx).style.width = c.spendPct + '%';
+    document.getElementById('pct-spend-val-'  + idx).textContent = c.spendPct + '%';
+
+    // Annual grid
+    var ag = document.getElementById('annual-item-' + idx);
+    if (ag) {
+      ag.querySelector('.av').textContent  = fmt(c.genSavMo * 12); ag.querySelector('.av').style.color = nc;
+      ag.querySelector('.av2').textContent = fmt(c.trvSavMo * 12) + ' \u2708';
+      ag.querySelector('.ac').textContent  = fmt(curSav) + ' + ' + fmt(curTrv) + '/cycle';
+      ag.style.borderColor = c.genSavMo > 0 ? nc + '55' : 'var(--border)';
+    }
+  }
+
+  // ── Update all ───────────────────────────────────────────────
+  function updateAll() {
+    updateIncomeDisplays();
+    document.getElementById('g-groc-val').textContent = '$' + document.getElementById('g-groc').value;
+    document.getElementById('g-buf-val').textContent  = '$' + document.getElementById('g-buf').value;
+    for (var i = 0; i < scenarios.length; i++) updateCard(i, scenarios[i]);
+  }
+
+  // ── Build cards ──────────────────────────────────────────────
+  var grid = document.getElementById('cards');
+  var annualGrid = document.getElementById('annualGrid');
+
+  for (var si = 0; si < scenarios.length; si++) {
+    (function(s, i) {
+      var income = getIncome(), g = getGlobals();
+      savingsState['rent_'   + s.rent] = Math.min(300, calcMax(s.rent, income, g));
+      travelState['travel_'  + s.rent] = 75;
+
+      var card = document.createElement('div');
+      card.className = 'card' + (s.rec ? ' recommended' : '');
+
+      var html = '';
+      if (s.rec) html += '<div class="rec-badge">\u2605 Recommended</div>';
+      html += '<div class="card-head">';
+      html += '<div>';
+      html += '<div class="rent-num" style="color:' + s.color + '">$' + s.rent.toLocaleString() + '<span style="font-size:1rem;font-weight:400;color:var(--muted)">/mo</span></div>';
+      html += '<div class="rent-sub">Rent \u00b7 All-in Total</div>';
+      html += '<div class="status-pill" style="background:' + s.color + '18;color:' + s.color + ';border:1px solid ' + s.color + '33">' + s.label + '</div>';
+      html += '</div>';
+      html += '<div class="needs-meter"><div class="big" id="needs-pct-' + i + '">\u2014</div><div class="lbl">needs</div></div>';
+      html += '</div>';
+
+      html += '<div class="savings-control">';
+      html += '<div class="sc-row"><div class="sc-header"><span class="sc-label" style="color:var(--accent)">\u26a1 General Savings / cycle</span><span class="sc-value" style="color:var(--accent)" id="slider-val-' + i + '">\u2014</span></div>';
+      html += '<input type="range" id="slider-' + i + '" min="0" max="1000" step="25" value="300">';
+      html += '<div class="sc-minmax"><span>$0</span><span>max \u2192</span></div></div>';
+      html += '<div class="sc-row"><div class="sc-header"><span class="sc-label" style="color:var(--travel)">\u2708 Travel Fund / cycle</span><span class="sc-value" style="color:var(--travel)" id="tslider-val-' + i + '">\u2014</span></div>';
+      html += '<input type="range" class="travel-slider" id="tslider-' + i + '" min="0" max="500" step="25" value="75">';
+      html += '<div class="sc-minmax"><span>$0</span><span>max \u2192</span></div></div>';
+      html += '</div>';
+
+      html += '<div class="equal-spend-bar"><span class="esb-label">\uD83D\uDCB8 Equal spending / person</span><span class="esb-val" id="equal-spend-' + i + '">\u2014</span><span class="esb-each" id="equal-spend-lbl-' + i + '">each /check</span></div>';
+
+      html += '<div class="persons">';
+      html += '<div class="person-col marcus-col">';
+      html += '<div class="person-name" style="color:var(--marcus)">Marcus</div>';
+      html += '<div class="prow"><span class="pl">Take-home</span><span class="pv" style="color:var(--marcus)" id="m-takehome-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">\uD83D\uDD12 Total bills</span><span class="pv" id="m-bills-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">Groceries + gas</span><span class="pv" id="m-groc-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">General savings</span><span class="pv" id="m-sav-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl" style="color:var(--travel)">\u2708 Travel</span><span class="pv" id="m-trv-' + i + '">\u2014</span></div>';
+      html += '<div class="prow buffer-row"><span class="pl">Buffer (min)</span><span class="pv" id="m-buf-' + i + '">\u2014</span></div>';
+      html += '<div class="prow spending-row"><span class="pl">\uD83D\uDCB8 Spending</span><span class="pv" id="m-spend-' + i + '">\u2014</span></div>';
+      html += '</div>';
+      html += '<div class="person-col">';
+      html += '<div class="person-name" style="color:var(--angie)">Angie</div>';
+      html += '<div class="prow"><span class="pl">Take-home</span><span class="pv" style="color:var(--angie)" id="a-takehome-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">\uD83D\uDD12 Total bills</span><span class="pv" id="a-bills-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">Groceries + gas</span><span class="pv" id="a-groc-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl">General savings</span><span class="pv" id="a-sav-' + i + '">\u2014</span></div>';
+      html += '<div class="prow"><span class="pl" style="color:var(--travel)">\u2708 Travel</span><span class="pv" id="a-trv-' + i + '">\u2014</span></div>';
+      html += '<div class="prow buffer-row"><span class="pl">Buffer (min)</span><span class="pv" id="a-buf-' + i + '">\u2014</span></div>';
+      html += '<div class="prow spending-row"><span class="pl">\uD83D\uDCB8 Spending</span><span class="pv" id="a-spend-' + i + '">\u2014</span></div>';
+      html += '</div></div>';
+
+      html += '<div class="card-summary">';
+      html += '<div class="cs-item"><div class="cs-val" id="monthly-sav-' + i + '">\u2014</div><div class="cs-lbl">monthly saved</div></div>';
+      html += '<div class="cs-item"><div class="cs-val" id="annual-sav-' + i + '">\u2014</div><div class="cs-lbl">annual savings</div></div>';
+      html += '<div class="cs-item"><div class="cs-val" id="per10k-' + i + '">\u2014</div><div class="cs-lbl">months to $10k</div></div>';
+      html += '</div>';
+
+      html += '<div class="travel-row"><span class="tr-label">\u2708 Travel Fund</span><div><div class="tr-cycle" id="travel-cycle-' + i + '">\u2014</div><div class="tr-annual" id="travel-annual-' + i + '">\u2014/yr</div></div></div>';
+
+      html += '<div class="pct-section">';
+      html += '<div class="pct-row"><span class="pct-lbl">Needs</span><div class="pct-track"><div class="pct-fill" id="pct-needs-fill-' + i + '"></div></div><span class="pct-val" id="pct-needs-val-' + i + '">\u2014</span></div>';
+      html += '<div class="pct-row"><span class="pct-lbl">Savings</span><div class="pct-track"><div class="pct-fill" id="pct-sav-fill-' + i + '" style="background:var(--accent)"></div></div><span class="pct-val" id="pct-sav-val-' + i + '" style="color:var(--accent)">\u2014</span></div>';
+      html += '<div class="pct-row"><span class="pct-lbl">Travel</span><div class="pct-track"><div class="pct-fill" id="pct-trv-fill-' + i + '" style="background:var(--travel)"></div></div><span class="pct-val" id="pct-trv-val-' + i + '" style="color:var(--travel)">\u2014</span></div>';
+      html += '<div class="pct-row"><span class="pct-lbl">Spending</span><div class="pct-track"><div class="pct-fill" id="pct-spend-fill-' + i + '" style="background:var(--angie)"></div></div><span class="pct-val" id="pct-spend-val-' + i + '" style="color:var(--angie)">\u2014</span></div>';
+      html += '</div>';
+
+      card.innerHTML = html;
+      grid.appendChild(card);
+
+      document.getElementById('slider-'  + i).addEventListener('input', function() { savingsState['rent_'   + s.rent] = +this.value; updateCard(i, s); });
+      document.getElementById('tslider-' + i).addEventListener('input', function() { travelState['travel_'  + s.rent] = +this.value; updateCard(i, s); });
+
+      var ag = document.createElement('div');
+      ag.className = 'annual-item'; ag.id = 'annual-item-' + i;
+      ag.innerHTML = '<div class="ar">$' + s.rent.toLocaleString() + '/mo rent</div><div class="av">\u2014</div><div class="av2">\u2014</div><div class="ac">\u2014</div>';
+      annualGrid.appendChild(ag);
+    })(scenarios[si], si);
+  }
+
+  // ── What-If ──────────────────────────────────────────────────
+  function buildWhatIf() {
+    var mg = document.getElementById('marcus-whatif');
+    var ag = document.getElementById('angie-whatif');
+
+    marcusWhatIf.forEach(function(w, wi) {
+      var btn = document.createElement('div');
+      btn.className = 'whatif-btn' + (w.check === 1585 ? ' selected' : '');
+      btn.innerHTML = '<div class="wf-label">' + w.label + '</div><div class="wf-val">' + fmt(w.check) + '/check</div><div class="wf-sub">' + fmt(w.check * 2) + '/mo</div>';
+      btn.addEventListener('click', function() {
+        mg.querySelectorAll('.whatif-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        document.getElementById('marcus-income').value = w.check;
+        updateAll();
+      });
+      mg.appendChild(btn);
+    });
+
+    angieWhatIf.forEach(function(w, wi) {
+      var btn = document.createElement('div');
+      btn.className = 'whatif-btn angie-btn' + (w.check === 1250 ? ' selected' : '');
+      btn.innerHTML = '<div class="wf-label">' + w.label + '</div><div class="wf-val angie">' + fmt(w.check) + '/check</div><div class="wf-sub">' + fmt(w.check * 2) + '/mo</div>';
+      btn.addEventListener('click', function() {
+        ag.querySelectorAll('.whatif-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        document.getElementById('angie-income').value = w.check;
+        updateAll();
+      });
+      ag.appendChild(btn);
+    });
+  }
+
+  // ── Events ───────────────────────────────────────────────────
+  document.querySelectorAll('#view-toggle .toggle-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#view-toggle .toggle-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentView = btn.getAttribute('data-view');
+      updateAll();
+    });
+  });
+
+  document.getElementById('whatif-toggle-btn').addEventListener('click', function() {
+    whatifVisible = !whatifVisible;
+    document.getElementById('whatif-banner').classList.toggle('active', whatifVisible);
+    document.getElementById('whatif-toggle-btn').classList.toggle('active', whatifVisible);
+  });
+
+  document.getElementById('marcus-income').addEventListener('input', function() {
+    document.querySelectorAll('#marcus-whatif .whatif-btn').forEach(function(b) { b.classList.remove('selected'); });
+    updateAll();
+  });
+  document.getElementById('angie-income').addEventListener('input', function() {
+    document.querySelectorAll('#angie-whatif .whatif-btn').forEach(function(b) { b.classList.remove('selected'); });
+    updateAll();
+  });
+  document.getElementById('g-groc').addEventListener('input', updateAll);
+  document.getElementById('g-buf').addEventListener('input', updateAll);
+
+  // ── Init ─────────────────────────────────────────────────────
+  buildWhatIf();
+  setTrack(document.getElementById('marcus-income'), '#38b6ff');
+  setTrack(document.getElementById('angie-income'),  '#ff6eb4');
+  updateAll();
+
+}); // end DOMContentLoaded
+</script>
+
+</body>
+</html>
